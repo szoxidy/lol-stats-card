@@ -108,7 +108,7 @@ test('近20局包含15场海克斯大乱斗时完整统计，并保留模式与�
   assert.throws(() => validateSnapshot(invalid), { code: 'INVALID_SNAPSHOT' });
 });
 
-test('模式参数同时筛选近期胜率和场数，排位赛季记录保持独立，无匹配对局不混入其他模式', async t => {
+test('模式参数同步战绩与段位布局，娱乐模式不展示其他队列段位，无匹配对局不混入其他模式', async t => {
   const directory = await sandbox(t), file = path.join(directory, 'profile.json');
   const rows = Array.from({ length: 20 }, (_, index) => {
     const row = game(index + 1, { gameMode: index < 15 ? 'KIWI' : 'CLASSIC', queueId: index < 15 ? 2400 : 440 });
@@ -116,18 +116,31 @@ test('模式参数同时筛选近期胜率和场数，排位赛季记录保持�
     return row;
   });
   const data = fixture(); data.history = normalizeHistory({ games: rows }, owner, {}, timestamp);
+  data.ranked.flex = { tier: 'DIAMOND', division: 'II', leaguePoints: 65, wins: 12, losses: 8, provisional: false };
   await saveSnapshot(data, file);
   const base = await service(t, { file });
   const flex = await (await fetch(`${base}/card.svg?queue=flex`)).text();
   assert.ok(flex.includes('灵活排位 · 5场'), '模式参数必须显示筛选后的真实场数');
   assert.ok(/data-stat="recent-win-rate"[^>]*>0%/.test(flex), '近期胜率只能使用选中模式的对局');
-  assert.ok(flex.includes('4胜 3负'), '赛季排位胜负不应使用近期对局覆盖');
+  assert.ok(flex.includes('12胜 8负'), '灵活排位使用自己的赛季记录，不能使用单双排记录或近期对局覆盖');
+  assert.ok(flex.includes('钻石 II'));
+  assert.ok(!flex.includes('黄金 IV'), '选择灵活排位不能继续展示单双排段位');
   const hextech = await (await fetch(`${base}/card.svg?queue=hextech`)).text();
   assert.ok(hextech.includes('海克斯大乱斗 · 15场'));
   assert.ok(/data-stat="recent-win-rate"[^>]*>80%/.test(hextech));
+  assert.ok(!hextech.includes('钻石 II') && !hextech.includes('黄金 IV'), '娱乐模式没有排位段位，不能借用其他队列');
   const solo = await (await fetch(`${base}/card.svg?queue=solo`)).text();
   assert.ok(solo.includes('单双排 · 0场'));
   assert.ok(solo.includes('当前快照没有该模式对局'));
+  assert.ok(solo.includes('黄金 IV'));
+  assert.ok(!solo.includes('钻石 II'));
+  for (const [queue, present, absent] of [['solo', '黄金 IV', '钻石 II'], ['flex', '钻石 II', '黄金 IV'], ['hextech', '海克斯大乱斗', '黄金 IV']]) {
+    const mini = await (await fetch(`${base}/card.svg?layout=compact&queue=${queue}`)).text();
+    assert.ok(mini.includes(present), `${queue} Mini应展示对应模式`);
+    assert.ok(!mini.includes(absent), `${queue} Mini不能展示其他队列段位`);
+  }
+  const combined = await (await fetch(`${base}/card.svg?queue=ranked`)).text();
+  assert.ok(combined.includes('黄金 IV') && combined.includes('钻石 II'));
   assert.equal((await fetch(`${base}/card.svg?queue=not-a-queue`)).status, 422);
 });
 
@@ -237,8 +250,18 @@ test('两套独立 HTTP 服务：认证写入、SVG 读回、失败保留和禁�
   assert.equal((await (await fetch(`${global}/health`)).json()).region, '国外');
   assert.ok(!JSON.stringify(await (await fetch(`${cn}/api/profile`)).json()).includes(data.accountKey));
   const imageResponse = await fetch(`${cn}/card.svg?motion=static`);
+  const originalSvg = await imageResponse.text();
   assert.match(imageResponse.headers.get('cache-control'), /max-age=60/);
   assert.equal((await fetch(`${cn}/card.svg?motion=static`, { headers: { 'If-None-Match': imageResponse.headers.get('etag') } })).status, 304);
+  const refreshed = structuredClone(data);
+  refreshed.syncedAt = refreshed.history.updatedAt = '2026-11-10T08:01:00.000Z';
+  refreshed.history.games[0].won = false;
+  assert.equal((await fetch(`${cn}/api/snapshot`, { method: 'PUT', headers: { Authorization: `Bearer ${'c'.repeat(32)}` }, body: JSON.stringify(refreshed) })).status, 200);
+  const updatedImage = await fetch(`${cn}/card.svg?motion=static`, { headers: { 'If-None-Match': imageResponse.headers.get('etag') } });
+  assert.equal(updatedImage.status, 200, '同一图片地址在数据变化后必须返回新卡片，不依赖主页重新构建');
+  assert.notEqual(updatedImage.headers.get('etag'), imageResponse.headers.get('etag'));
+  assert.notEqual(await updatedImage.text(), originalSvg);
+  assert.equal(await (await fetch(`${global}/card.svg?motion=static`)).text(), originalSvg, '尚未接收更新的另一端继续独立展示自己的资料');
 });
 
 test('逐帧模式包含24个独立帧并尊重减少动画；静态模式完全去掉动画', () => {

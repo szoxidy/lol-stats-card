@@ -37,9 +37,10 @@ async function localIcon(filename, mime) {
 }
 
 async function cardIcons(snapshot, queue = 'all') {
-  const games = selectHistory(snapshot?.history?.games || [], queue).games;
+  const selection = selectHistory(snapshot?.history?.games || [], queue), games = selection.games;
   const ids = new Set([...statistics(games).champions.map(c => c.id), ...games.slice(0, 5).map(game => game.championId)]);
-  const tiers = new Set([snapshot?.ranked?.solo?.tier, snapshot?.ranked?.flex?.tier].filter(t => t && t !== 'NONE'));
+  const rankKeys = ['all', 'ranked'].includes(selection.id) ? ['solo', 'flex'] : ['solo', 'flex'].includes(selection.id) ? [selection.id] : [];
+  const tiers = new Set(rankKeys.map(key => snapshot?.ranked?.[key]?.tier).filter(t => t && t !== 'NONE'));
   const [champions, ranks] = await Promise.all([
     Promise.all([...ids].map(async id => [id, await localIcon(`champions/${id}.webp`, 'webp')])),
     Promise.all([...tiers].map(async tier => [tier, await localIcon(`ranks/${tier.toLowerCase()}.webp`, 'webp')]))

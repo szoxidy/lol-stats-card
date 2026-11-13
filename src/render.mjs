@@ -23,6 +23,11 @@ export function renderCard(snapshot, options = {}) {
   const available = snapshot?.history && snapshot.history.status !== 'unavailable';
   const stats = available ? statistics(games) : null, latest = games[0];
   const solo = snapshot?.ranked?.solo, flex = snapshot?.ranked?.flex;
+  const focusedRank = selection.id === 'solo' || selection.id === 'flex';
+  const bothRanks = selection.id === 'all' || selection.id === 'ranked';
+  const rankedView = focusedRank || bothRanks;
+  const selectedRank = selection.id === 'flex' ? flex : solo;
+  const rankDescription = focusedRank ? `${selection.label}${rankName(selectedRank)}。` : bothRanks ? `单双排${rankName(solo)}，灵活排位${rankName(flex)}。` : '';
   const synced = options.demo ? '演示资料 · 不代表真实账号' : snapshot ? `最近同步 ${date(snapshot.syncedAt)}` : '等待首次更新 · 尚无战绩资料';
   const stale = ['ranked', 'history'].some(key => snapshot?.[key]?.status === 'stale');
   const scope = `${selection.label} · ${stats?.count ?? 0}场`;
@@ -45,13 +50,16 @@ export function renderCard(snapshot, options = {}) {
   const art = options.art ? `<use href="#hero-art" y="${backgroundName === 'miss-fortune' ? -10 : -30}"/>` : '<rect width="550" height="325" fill="#4c354e"/>';
   let content;
   if (mini) {
-    const selectedRank = selection.id === 'flex' ? flex : solo;
+    const modeDetail = bothRanks
+      ? [[solo, '单双排', 17], [flex, '灵活', 44]].map(([rank, label, y]) => `<g><title>${label}</title>${emblem(rank, 241, y, 24)}${text(273, y + 17, rankName(rank), 13, '#fff', 500)}${text(384, y + 17, rank?.leaguePoints !== null && rank?.leaguePoints !== undefined ? `${rank.leaguePoints} LP` : '—', 9, '#e0cceb', 400, 'text-anchor="end"')}</g>`).join('')
+      : rankedView
+        ? `${emblem(selectedRank, 236, 17, 46)}${text(288, 37, rankName(selectedRank), (TIERS[selectedRank?.tier] || '').length > 3 ? 13 : 18, '#fff', 500)}${text(289, 56, selectedRank?.leaguePoints !== null && selectedRank?.leaguePoints !== undefined ? `${selectedRank.leaguePoints} LP` : '胜点待更新', 10, '#e0cceb')}`
+        : `${text(245, 37, selection.label, 15, '#fff', 500)}${text(245, 58, stats?.count ? `KDA ${stats.kda}` : '暂无该模式战绩', 11, '#e0cceb')}`;
     content = `<g clip-path="url(#banner)"><g transform="scale(.727273)">${art}<rect width="550" height="165" fill="url(#shade)"/>${animation.atmosphere}</g></g>
       ${portrait(16, 17, 62)}${levelBadge(profile.level, 69, 84, 12)}
       ${text(94, 37, name, Array.from(name).length > 7 ? 16 : 22, '#fff', 600)}${text(95, 56, `#${profile.tag || '—'}`, 11, '#e0cceb')}
       ${text(95, 76, region, 10.5, '#e9dcef')}${text(95, 96, stats?.count ? `${selection.id === 'all' ? `近${stats.count}局` : `${selection.label}${stats.count}场`}  ${stats.winRate}%胜率` : '暂无该模式战绩', selection.label.length > 5 ? 8.5 : 10, '#e0cceb')}
-      ${emblem(selectedRank, 236, 17, 46)}${text(288, 37, rankName(selectedRank), (TIERS[selectedRank?.tier] || '').length > 3 ? 13 : 18, '#fff', 500)}
-      ${text(289, 56, selectedRank?.leaguePoints !== null && selectedRank?.leaguePoints !== undefined ? `${selectedRank.leaguePoints} LP` : '胜点待更新', 10, '#e0cceb')}
+      ${modeDetail}
       ${games.slice(0, 5).map((game, index) => `<g><title>${escape(`${game.championName}，${game.won ? '胜利' : '失败'}`)}</title>${image(icon(game.championId), 245 + index * 28, 77, 22, 22, `clip-path="url(#recent-${index})"`)}<rect x="${245 + index * 28}" y="77" width="22" height="22" rx="4" fill="none" stroke="${game.won ? palette.win : palette.loss}" stroke-width="1.5"/>${!icon(game.championId) ? text(256 + index * 28, 92, game.won ? '胜' : '负', 10, game.won ? palette.win : palette.loss, 400, 'text-anchor="middle"') : ''}</g>`).join('')}${text(16, 113, synced, 7.5, '#cfb9d8')}${text(384, 113, '最近五场', 7.5, '#cfb9d8', 400, 'text-anchor="end"')}`;
   } else {
     const rankRow = (rank, label, y, primary = false) => `${emblem(rank, 20, y - 13, primary ? 64 : 46)}${text(primary ? 96 : 78, y, label, 9.5, palette.muted)}${text(primary ? 96 : 78, y + 26, rankName(rank), primary ? 25 : 19, palette.text, 500)}${text(290, y + 25, rank?.leaguePoints !== null && rank?.leaguePoints !== undefined ? `${rank.leaguePoints} LP` : '—', 11.5, palette.muted, 400, 'text-anchor="end"')}${text(primary ? 96 : 78, y + 43, seasonRecord(rank), 9.5, palette.muted)}`;
@@ -60,14 +68,24 @@ export function renderCard(snapshot, options = {}) {
       const label = options.championNames?.[champion.id] || champion.name;
       return `${image(icon(champion.id), x, 274, 28, 28, `clip-path="url(#champion-${index})"`)}${text(x + 34, 285, label.length > 5 ? `${label.slice(0, 4)}…` : label, 9, palette.text)}${text(x + 34, 300, `${champion.count}场`, 8.5, palette.muted)}`;
     }).join('');
+    const modePanel = bothRanks
+      ? `${rankRow(solo, '单双排 · 赛季', 142, true)}${rankRow(flex, '灵活排位 · 赛季', 209)}`
+      : focusedRank
+        ? `${emblem(selectedRank, 20, 155, 88)}${text(122, 143, `${selection.label} · 赛季`, 10, palette.muted)}${text(122, 181, rankName(selectedRank), 28, palette.text, 500)}${text(123, 205, selectedRank?.leaguePoints !== null && selectedRank?.leaguePoints !== undefined ? `${selectedRank.leaguePoints} LP` : '胜点待更新', 13, palette.muted)}${text(123, 228, seasonRecord(selectedRank), 10, palette.muted)}`
+        : `${text(20, 143, selection.label, 11, palette.text, 500)}${text(290, 143, '常用英雄', 9.5, palette.muted, 400, 'text-anchor="end"')}${(stats?.champions || []).map((champion, index) => {
+          const y = 162 + index * 47, matches = games.filter(game => game.championId === champion.id);
+          const winRate = Math.round(matches.filter(game => game.won).length / matches.length * 100);
+          const label = options.championNames?.[champion.id] || champion.name;
+          return `${image(icon(champion.id), 20, y, 40, 40, `clip-path="url(#mode-champion-${index})"`)}${text(73, y + 15, label, 11, palette.text)}${text(73, y + 33, `${champion.count}场 · ${winRate}%胜率`, 10, palette.muted)}`;
+        }).join('') || text(20, 182, '暂无该模式英雄记录', 11, palette.muted)}`;
     content = `<g clip-path="url(#banner)">${art}<rect width="550" height="120" fill="url(#shade)"/>${animation.atmosphere}</g>
       ${portrait(20, 18, 80)}${levelBadge(profile.level, 95, 100)}${text(122, 48, name, Array.from(name).length > 10 ? 22 : 30, '#fff', 600)}${text(124, 71, `#${profile.tag || '—'}`, 12, '#e1cdeb')}${text(124, 94, region, 11, '#e8d8f0')}
-      ${rankRow(solo, '单双排 · 赛季', 142, true)}${rankRow(flex, '灵活排位 · 赛季', 209)}
+      ${modePanel}
       <path d="M315 140v161" stroke="${palette.line}" stroke-opacity=".5"/>
       ${text(336, 143, scope, 10.5, palette.muted)}${text(336, 163, '近期胜率', 9.5, palette.muted)}${text(447, 163, 'KDA', 9.5, palette.muted)}
       ${text(336, 195, stats?.count ? `${stats.winRate}%` : '—', 30, palette.text, 500, 'data-stat="recent-win-rate"')}${text(447, 195, stats?.count ? stats.kda : '—', 27, palette.text, 500, 'data-stat="recent-kda"')}
       ${stats?.count ? `${text(336, 217, `${stats.wins}胜`, 10, palette.win)}${text(379, 217, `${stats.losses}负`, 10, palette.loss)}${results(336, 231, 20, 9.4, 6)}` : text(336, 217, '当前快照没有该模式对局', 9, palette.muted)}
-      ${text(20, 265, '近期常用', 9.5, palette.muted)}${champions || text(20, 288, '暂无该模式英雄记录', 10, palette.muted)}
+      ${rankedView ? `${text(20, 265, '近期常用', 9.5, palette.muted)}${champions || text(20, 288, '暂无该模式英雄记录', 10, palette.muted)}` : ''}
       ${text(336, 265, '最近一局', 9.5, palette.muted)}${latest ? text(530, 265, modeName(latest), 8.5, palette.muted, 400, 'text-anchor="end"') : ''}
       ${latest ? image(icon(latest.championId), 336, 274, 30, 30, 'clip-path="url(#latest-champion)"') : ''}${text(378, 286, latest ? latest.won ? '胜利' : '失败' : '—', 17, latest ? latest.won ? palette.win : palette.loss : palette.muted, 500)}${text(378, 302, latest ? `${latest.kills}/${latest.deaths}/${latest.assists}` : '暂无对局', 10, palette.muted)}
       ${text(20, 315, `${synced}${stale ? ' · 部分旧资料' : ''}`, 7.5, palette.muted)}${text(530, 315, sourceScope, 7.5, palette.muted, 400, 'text-anchor="end"')}`;
@@ -75,11 +93,12 @@ export function renderCard(snapshot, options = {}) {
   const font = options.font ? `@font-face{font-family:CardRounded;src:url(${options.font}) format('woff2');font-weight:400 700;}` : '';
   const images = [...embedded].map(([href, id]) => `<image id="${id}" width="1" height="1" href="${href}" preserveAspectRatio="xMidYMid meet"/>`).join('');
   const clips = [0, 1, 2].map(index => `<clipPath id="champion-${index}"><rect x="${20 + index * 96}" y="274" width="28" height="28" rx="5"/></clipPath>`).join('');
+  const modeClips = [0, 1, 2].map(index => `<clipPath id="mode-champion-${index}"><rect x="20" y="${162 + index * 47}" width="40" height="40" rx="6"/></clipPath>`).join('');
   const recentClips = Array.from({length:5}, (_, index) => `<clipPath id="recent-${index}"><rect x="${245 + index * 28}" y="77" width="22" height="22" rx="4"/></clipPath>`).join('');
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img" aria-labelledby="title desc">
-    <title id="title">${escape(name)}的英雄联盟个人卡片</title><desc id="desc">${escape(`${rankName(solo)}。${synced}。${scope}，${sourceScope}，统计仅针对已识别的本人对局。赛季排位记录与近期战绩分别显示。${!avatar ? '账号头像尚未读取。' : ''}`)}</desc>
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img" aria-labelledby="title desc" data-queue="${selection.id}">
+    <title id="title">${escape(name)}的英雄联盟个人卡片</title><desc id="desc">${escape(`${rankDescription}${synced}。${scope}，${sourceScope}，统计仅针对已识别的本人对局。${rankedView ? '赛季排位记录与近期战绩分别显示。' : ''}${!avatar ? '账号头像尚未读取。' : ''}`)}</desc>
     <style>${font}text{font-family:CardRounded,"Microsoft YaHei","PingFang SC",sans-serif;font-variant-numeric:tabular-nums}image{image-rendering:auto}</style>${animation.style}
-    <defs>${artDefinition}${images}<clipPath id="outer"><rect width="${width}" height="${height}" rx="10"/></clipPath><clipPath id="banner"><rect width="${width}" height="120"/></clipPath>
+    <defs>${artDefinition}${images}${modeClips}<clipPath id="outer"><rect width="${width}" height="${height}" rx="10"/></clipPath><clipPath id="banner"><rect width="${width}" height="120"/></clipPath>
       <clipPath id="avatar"><rect x="${mini ? 16 : 20}" y="${mini ? 17 : 18}" width="${mini ? 62 : 80}" height="${mini ? 62 : 80}" rx="8"/></clipPath>${clips}${recentClips}<clipPath id="latest-champion"><rect x="336" y="274" width="30" height="30" rx="5"/></clipPath>
       <linearGradient id="shade"><stop stop-color="#20192a" stop-opacity=".94"/><stop offset=".42" stop-color="#2e2139" stop-opacity=".74"/><stop offset=".73" stop-color="#20182d" stop-opacity=".18"/><stop offset="1" stop-color="#20182d" stop-opacity="${mini ? '.74' : '.38'}"/></linearGradient>
     </defs><g clip-path="url(#outer)"><rect width="${width}" height="${height}" fill="${palette.body}"/>${content}<rect x=".5" y=".5" width="${width - 1}" height="${height - 1}" rx="9.5" fill="none" stroke="${light ? '#d7c6dd' : '#e8d5f0'}" stroke-opacity="${light ? '.6' : '.1'}"/></g></svg>`;
