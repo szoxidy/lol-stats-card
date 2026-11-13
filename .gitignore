@@ -1,0 +1,13 @@
+data/
+output/
+.env
+.env.*
+!.env.example
+*.log
+node_modules/
+config/targets.json
+config/player.json
+AGENTS.md
+docs/progress.md
+assets/icons/champions/*.png
+assets/art/*.jpg

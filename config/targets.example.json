@@ -1,0 +1,4 @@
+[
+  { "name": "国内", "url": "https://cn-card.example.com/api/snapshot", "tokenEnv": "LOL_CARD_TOKEN_CN" },
+  { "name": "国外", "url": "https://global-card.example.com/api/snapshot", "tokenEnv": "LOL_CARD_TOKEN_GLOBAL" }
+]

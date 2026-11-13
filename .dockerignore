@@ -1,0 +1,10 @@
+.git
+node_modules
+data
+output
+.env
+.env.*
+config/player.json
+config/targets.json
+AGENTS.md
+docs/progress.md

@@ -1,0 +1,18 @@
+import { mkdir, writeFile } from 'node:fs/promises';
+import path from 'node:path';
+import { root } from '../src/collector.mjs';
+const directory = path.join(root, 'assets');
+const versionsUrl = 'https://ddragon.leagueoflegends.com/api/versions.json';
+const response = await fetch(versionsUrl, { signal: AbortSignal.timeout(25000) });
+if (!response.ok) throw new Error(`Data Dragon 版本请求失败：${response.status}`);
+const [version] = await response.json();
+if (!/^\d+\.\d+\.\d+$/.test(version)) throw new Error('Data Dragon 版本格式无效。');
+const source = `https://ddragon.leagueoflegends.com/cdn/${version}/data/zh_CN/champion.json`;
+const championsResponse = await fetch(source, { signal: AbortSignal.timeout(25000) });
+if (!championsResponse.ok) throw new Error(`英雄资料请求失败：${championsResponse.status}`);
+const { data } = await championsResponse.json();
+const champions = Object.fromEntries(Object.values(data).map(c => [c.key, { id: c.id, name: c.name, title: c.title }]));
+await mkdir(directory, { recursive: true });
+await writeFile(path.join(directory, 'champions.json'), `${JSON.stringify(champions, null, 2)}\n`);
+await writeFile(path.join(directory, 'source.json'), `${JSON.stringify({ source, version, fetchedAt: new Date().toISOString(), count: Object.keys(champions).length }, null, 2)}\n`);
+console.log(JSON.stringify({ version, champions: Object.keys(champions).length }));

@@ -1,0 +1,20 @@
+services:
+  lol-card:
+    image: node:24-alpine
+    working_dir: /app
+    command: ["node", "src/server.mjs"]
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      LOL_CARD_HOST: 0.0.0.0
+      LOL_CARD_PORT: 4187
+      LOL_CARD_ENABLE_LOCAL_SYNC: 0
+      LOL_CARD_DATA_DIR: /app/data
+    ports:
+      - "127.0.0.1:${LOL_CARD_EXTERNAL_PORT:-33111}:4187"
+    volumes:
+      - ../src:/app/src:ro
+      - ../config/player.json:/app/config/player.json:ro
+      - ../public:/app/public:ro
+      - ../assets:/app/assets:ro
+      - ../data:/app/data

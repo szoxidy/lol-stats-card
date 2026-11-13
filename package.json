@@ -1,0 +1,23 @@
+{
+  "name": "lol-stats-card",
+  "version": "0.1.0",
+  "description": "Compact League of Legends SVG profile cards with embedded assets and independent regional snapshots.",
+  "license": "MIT",
+  "repository": { "type": "git", "url": "https://github.com/szoxidy/lol-stats-card.git" },
+  "private": true,
+  "packageManager": "pnpm@12.11.2",
+  "type": "module",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "start": "node src/server.mjs",
+    "dev": "node --watch src/server.mjs",
+    "sync:client": "node src/collector.mjs",
+    "probe:client": "node src/collector.mjs --probe",
+    "assets": "node scripts/fetch-assets.mjs",
+    "assets:icons": "node scripts/fetch-card-icons.mjs",
+    "examples": "node scripts/render-examples.mjs",
+    "audit:release": "node scripts/audit-release.mjs",
+    "test": "node --test --test-reporter=spec test/card.test.mjs",
+    "check": "node scripts/check.mjs"
+  }
+}

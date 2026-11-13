@@ -1,0 +1,27 @@
+[
+  {
+    "key": "ahri",
+    "source": "https://ddragon.leagueoflegends.com/cdn/img/champion/splash/Ahri_0.jpg",
+    "bytes": 158108
+  },
+  {
+    "key": "yasuo",
+    "source": "https://ddragon.leagueoflegends.com/cdn/img/champion/splash/Yasuo_0.jpg",
+    "bytes": 208959
+  },
+  {
+    "key": "jinx",
+    "source": "https://ddragon.leagueoflegends.com/cdn/img/champion/splash/Jinx_0.jpg",
+    "bytes": 161141
+  },
+  {
+    "key": "miss-fortune",
+    "source": "https://ddragon.leagueoflegends.com/cdn/img/champion/splash/MissFortune_16.jpg",
+    "championId": 21,
+    "skinId": 21016,
+    "skinName": "武装战姬 厄运小姐",
+    "bytes": 115704,
+    "sha256": "3dcc38bed8eda2de010deb41dd3eff3397327288ca122d4b74323d41b6c41674",
+    "selectionSource": "user skin description; client association pending"
+  }
+]
